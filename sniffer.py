@@ -27,8 +27,17 @@ def main():
 
     # open a raw socket to sniff
     raw_sock = socket(AF_PACKET, SOCK_RAW, htons(0x0003))
+    print('Sniffing packets...')
     while True:
         raw_data, addr = raw_sock.recvfrom(65536)
+        
+        # get ethernet header
+        ethernet_header = raw_data[:14]
+        
+        # get ethernet type
+        ethernet_type = ethernet_header[12:14].hex()
+
+        # check if IP, ARP, or other
 
 
 def exit_gracefully():
