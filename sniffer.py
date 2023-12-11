@@ -2,6 +2,8 @@ from socket import *
 import struct
 import binascii
 
+debug = False
+
 ethernet_packets = {
     'IP': 0, 
     'ARP': 0,
@@ -24,36 +26,46 @@ app_packets = {
     'OTHER': 0
 }
 
-def analyze_ether(raw_data):
 
-    proto_type = struct.unpack('!6s6sH', raw_data[:14])[2]
+# function to analyze the ethernet frame
+# takes in
+def analyze_ether(data):
+    # the raw socket returns the ethernet frame without the preamble
+    # so we start at the first byte of the destination mac address
+    # doing the math, we can get that type adress are the two bytes at
+    # index 12 and 14 of the ethernet frame
+
+    
+    proto_type = struct.unpack('!H', data[12:14])[0]
+
+    if debug:
+        print(f'Protocol type int: {proto_type}')
+        print(f'Protocol type hex: {hex(proto_type)}')
+
+    # ipv4 or ipv6 check
     if proto_type == 0x0800 or proto_type == 0x86dd:
         ethernet_packets['IP'] += 1
-        analyze_ip(raw_data)
+
+        ip_data = data[14:]
+        analyze_ip(ip_data)
+
+    # arp check
     elif proto_type == 0x0806:
         ethernet_packets['ARP'] += 1
+
+    # other
     else:
         ethernet_packets['OTHER'] += 1
 
-def analyze_ip(raw_data):
-    ip_protocol = struct.unpack('!BBHHHBBH4s4s', raw_data[14:34])[6]
 
-    if ip_protocol == 1:
-        ip_packets['ICMP'] += 1
-    elif ip_protocol == 6:
-        ip_packets['TCP'] += 1
-        analyze_tcp_udp(raw_data)
-    elif ip_protocol == 17:
-        ip_packets['UDP'] += 1
-        analyze_tcp_udp(raw_data)
-    else:
-        ip_packets['OTHER'] += 1
+def analyze_tcp_udp(data):
+
+    # we just need to check the port numbers
+    # those are the first 4 bytes of the data in the header
+    port = struct.unpack('!HH', data[:4])
 
 
-def analyze_tcp_udp(raw_data):
-    # check port number for http, ssh, dns, smtp or other
-    port = struct.unpack('!HH', raw_data[34:38])
-
+    # determine which port it is for the app layer
     if port[0] == 80 or port[1] == 80:
         app_packets['HTTP'] += 1
     elif port[0] == 22 or port[1] == 22:
@@ -64,6 +76,37 @@ def analyze_tcp_udp(raw_data):
         app_packets['SMTP'] += 1
     else:
         app_packets['OTHER'] += 1
+
+def analyze_ip(data):
+
+    # the ip header is 20 bytes long
+    # so we can un pack the first 20 bytes of the data
+    ip_header = struct.unpack('!BBHHHBBH4s4s', data[:20])
+
+    # from debugging, we know that the 6th index is the protocol
+    ip_protocol = ip_header[6]
+
+    if debug:
+        print(f'IP Protocol int: {ip_protocol}')
+
+    if ip_protocol == 1:
+        ip_packets['ICMP'] += 1
+    elif ip_protocol == 6:
+        ip_packets['TCP'] += 1
+
+
+        app_data = data[20:]
+        analyze_tcp_udp(app_data)
+    elif ip_protocol == 17:
+        ip_packets['UDP'] += 1
+        
+        app_data = data[20:]
+        analyze_tcp_udp(app_data)
+    else:
+        ip_packets['OTHER'] += 1
+
+
+
 
 
 
@@ -79,101 +122,12 @@ def main():
     while True:
         raw_data, addr = raw_sock.recvfrom(65536)
         analyze_ether(raw_data)
-        # EthHeader = struct.unpack("!6s6sH",raw_data[0:14])
-        # dstMac = binascii.hexlify(EthHeader[0]) 
-        # srcMac = binascii.hexlify(EthHeader[1]) 
-        # protoType = EthHeader[2] 
-        # nextProto = hex(protoType)
-        # if (nextProto == '0x800'): 
-        #     proto = 'IPV4'
-        #     ethernet_packets['IP'] += 1
-
-        #     analyze_ether(raw_data)
-            
-
-        #     # analyze the IP header to see which protocol it is
-        #     IPHeader = struct.unpack("!BBHHHBBH4s4s",raw_data[14:34])
-        #     protocol = IPHeader[6]
-        #     # check for tcp, udp, icmp or other
-        #     if (protocol == 6):
-        #         proto = 'TCP'
-        #         ip_packets['TCP'] += 1
-
-        #         # analyze the TCP header to see which application it is
-        #         TCPHeader = struct.unpack("!HHLLBBHHH",raw_data[34:54])
-        #         # check for http, ssh, dns, smtp or other
-        #         if (TCPHeader[0] == 80 or TCPHeader[1] == 80):
-        #             proto = 'HTTP'
-        #             app_packets['HTTP'] += 1
-
-        #         elif (TCPHeader[0] == 22 or TCPHeader[1] == 22):
-        #             proto = 'SSH'
-        #             app_packets['SSH'] += 1
-
-        #         elif (TCPHeader[0] == 53 or TCPHeader[1] == 53):
-        #             proto = 'DNS'
-        #             app_packets['DNS'] += 1
-
-        #         elif (TCPHeader[0] == 25 or TCPHeader[1] == 25):
-        #             proto = 'SMTP'
-        #             app_packets['SMTP'] += 1
-
-        #         else:
-        #             proto = 'OTHER'
-        #             app_packets['OTHER'] += 1
-
-        #     elif (protocol == 17):
-        #         proto = 'UDP'
-        #         ip_packets['UDP'] += 1
-
-        #         # analyze the UDP header to see which application it is
-        #         UDPHeader = struct.unpack("!HHHH",raw_data[34:42])
-        #         # check for http, ssh, dns, smtp or other
-        #         if (UDPHeader[0] == 80 or UDPHeader[1] == 80):
-        #             proto = 'HTTP'
-        #             app_packets['HTTP'] += 1
-
-        #         elif (UDPHeader[0] == 22 or UDPHeader[1] == 22):
-        #             proto = 'SSH'
-        #             app_packets['SSH'] += 1
-
-        #         elif (UDPHeader[0] == 53 or UDPHeader[1] == 53):
-        #             proto = 'DNS'
-        #             app_packets['DNS'] += 1
-
-        #         elif (UDPHeader[0] == 25 or UDPHeader[1] == 25):
-        #             proto = 'SMTP'
-        #             app_packets['SMTP'] += 1
-
-        #         else:
-        #             proto = 'OTHER'
-        #             app_packets['OTHER'] += 1
-
-        #     elif (protocol == 1):
-        #         proto = 'ICMP'
-        #         ip_packets['ICMP'] += 1
-        #     else:
-        #         proto = 'OTHER'
-        #         ip_packets['OTHER'] += 1
-
-        # elif (nextProto == '0x86dd'): 
-        #     proto = 'IPV6'
-        #     ethernet_packets['IP'] += 1
-
-        # elif (nextProto == '0x806'):
-        #     proto = 'ARP'
-        #     ethernet_packets['ARP'] += 1
-
-        # else:
-        #     proto = 'OTHER'
-        #     ethernet_packets['OTHER'] += 1
-
+        
 
     
 
-
+# function to print total packets
 def exit_gracefully():
-    # print total of packets
     print('--------------------------------------------------')
     print('The packet sniffer processed a total of N packets')
     print('Of the N packets:')
@@ -201,7 +155,8 @@ def exit_gracefully():
 
 
 
-
+# main section so it calls the main sniffer script and then
+# waits for a CTRL-C to exit
 if __name__ == '__main__':
     try:
         main()
