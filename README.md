@@ -1,34 +1,38 @@
-Eduardo Santín Martinez
-CCOM 4205
-Project 3 - Final project - Packet-Sniffer
+# CCOM 4205 - Project 3 - Final project - Packet-Sniffer
+## Eduardo Santín 
 
-This project is packet sniffer script that detects the following protocols:
-1. ARP
-2. IP
-3. TCP
-4. UDP
-5. ICMP
-6. HTTP
-7. DNS
-8. SMTP
-and others listed as "Other" in the output.
+### This project is packet sniffer script that detects the following protocols:
+    
+    - ARP
+    - IP
+    - TCP
+    - UDP
+    - ICMP
+    - HTTP
+    - HTTPS
+    - DNS
+    - SMTP
+    - Other
 
-Requirements:
-1.python 3
+### Requirements:
+- python 3
 
-How to run:
-1. Open a terminal and navigate to the directory where the files are located.
+### How to run:
+  1. Open a terminal and navigate to the directory where the files are located.
 
-2. Run the command: python3 sniffer.py
+  2. Run the command: `sudo `
 
-3. The program will run in the background and it will run until the user presses Ctrl+C to stop it. The output will be displayed in the terminal once the user stops the program.
+  3. The program will run in the background and it will run until the user presses Ctrl+C to stop it. The output will be displayed in the terminal once the user stops the program.
 
 
+### Comments:
+- SMTP on private networks were not able to be detected. On a public network, like the campus network, it was able to detect SMTP.
+- Split http and https into two different protocols. They are differentiated in the output print.
 
-Sites used for reference and help:
-https://wiki.wireshark.org/Ethernet
-
-https://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml
+### Sites used for reference and help:
+ - https://wiki.wireshark.org/Ethernet
+ - https://support.huawei.com/enterprise/fr/doc/EDOC1100112351/dd76ea1f/ipv4-packet-format
+ - https://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml
 
 
 
